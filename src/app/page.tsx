@@ -6,6 +6,7 @@ import TaskBoard from './components/TaskBoard'
 import ChatSidebar from './components/ChatSidebar'
 import type { Task } from './components/TaskBoard'
 import { syncTasksFromFrontend } from '@/lib/db/tasks'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // Tarefas iniciais definidas aqui para garantir consistência
 const initialTasks: Task[] = [
@@ -63,6 +64,7 @@ export default function Home() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [activeView, setActiveView] = useState('tasks');
   
   // Sincroniza tarefas no localStorage
   useEffect(() => {
@@ -104,14 +106,53 @@ export default function Home() {
   }
   
   return (
-    <main className="flex min-h-screen min-w-[800px]">
-      <Sidebar />
+    <main className="flex min-h-screen min-w-[800px] bg-white">
+      <Sidebar onMenuItemClick={(itemId) => setActiveView(itemId)} />
       
-      <TaskBoard 
-        onTaskClick={handleTaskSelect}
-        onTasksUpdate={handleTasksUpdate}
-        initialTasks={tasks}
-      />
+      <div className="flex-1 flex bg-white overflow-hidden">
+        {/* Dashboard com animação */}
+        <AnimatePresence initial={false}>
+          {activeView === 'dashboards' && (
+            <motion.div 
+              key="dashboard-panel"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: "60%", opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.4, ease: "easeInOut" }}
+              className="border-r border-gray-200 overflow-hidden"
+            >
+              <div className="p-8 h-full">
+                <div className="max-w-xl mx-auto">
+                  <h2 className="text-2xl font-semibold text-gray-800 mb-8">Dashboard</h2>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="O que você quer saber?"
+                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 text-lg focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 shadow-sm"
+                    />
+                    <span className="material-icons absolute left-3 top-3 text-gray-400">search</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        {/* TaskBoard com animação responsiva */}
+        <motion.div 
+          animate={{ 
+            width: activeView === 'dashboards' ? "40%" : "100%"
+          }}
+          transition={{ duration: 0.4, ease: "easeInOut" }}
+          className="h-full"
+        >
+          <TaskBoard 
+            onTaskClick={handleTaskSelect}
+            onTasksUpdate={handleTasksUpdate}
+            initialTasks={tasks}
+          />
+        </motion.div>
+      </div>
       
       <ChatSidebar 
         selectedTask={selectedTask}

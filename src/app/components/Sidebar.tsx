@@ -4,18 +4,28 @@ import { useState } from 'react'
 import { useCategories } from '@/lib/contexts/CategoryContext'
 import CategoryModal from './CategoryModal'
 
-export default function Sidebar() {
+interface SidebarProps {
+  onMenuItemClick?: (itemId: string) => void
+}
+
+export default function Sidebar({ onMenuItemClick }: SidebarProps) {
   const [activeItem, setActiveItem] = useState('tasks')
   const [isExpanded, setIsExpanded] = useState(true)
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
   const { categories, addCategory, deleteCategory } = useCategories()
 
   const menuItems = [
-    { id: 'home', label: 'Home', icon: 'home' },
     { id: 'tasks', label: 'Tasks', icon: 'check_circle' },
-    { id: 'folders', label: 'Folders', icon: 'folder' },
+    { id: 'dashboards', label: 'Dashboards', icon: 'dashboard' },
     { id: 'calendar', label: 'Calendar', icon: 'calendar_today' },
   ]
+
+  const handleMenuItemClick = (itemId: string) => {
+    setActiveItem(itemId)
+    if (onMenuItemClick) {
+      onMenuItemClick(itemId)
+    }
+  }
 
   const handleAddCategory = (name: string, emoji: string) => {
     addCategory(name, emoji)
@@ -80,7 +90,7 @@ export default function Sidebar() {
             {menuItems.map((item) => (
               <li key={item.id}>
                 <button
-                  onClick={() => setActiveItem(item.id)}
+                  onClick={() => handleMenuItemClick(item.id)}
                   className={`
                     w-full flex items-center rounded-lg text-sm transition-colors relative
                     ${activeItem === item.id 
