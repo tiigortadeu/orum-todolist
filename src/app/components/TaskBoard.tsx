@@ -111,38 +111,6 @@ export default function TaskBoard() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [showAddTask, setShowAddTask] = useState(false)
 
-  const addTask = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim()) return
-    
-    const selectedCategory = taskCategories.find(cat => cat.name === selectedTag)
-    
-    const newTask: Task = { 
-      id: Date.now().toString(),
-      text: input,
-      description: description || "Sem descrição",
-      tag: selectedTag,
-      emoji: selectedCategory?.emoji || "📝",
-      time: selectedTime,
-      dueDate: selectedDate,
-      priority: selectedPriority,
-      section: "hoje",
-      checked: false 
-    }
-    setTasks([...tasks, newTask])
-    setInput("")
-    setDescription("")
-    setSelectedTime("")
-    setSelectedPriority('medium')
-    setShowAddTask(false)
-  }
-
-  const toggleTask = (taskId: string) => {
-    setTasks(tasks => tasks.map(task => 
-      task.id === taskId ? { ...task, checked: !task.checked } : task
-    ))
-  }
-
   const addFilter = () => {
     const newFilter: Filter = {
       id: Date.now().toString(),
@@ -191,6 +159,38 @@ export default function TaskBoard() {
   const filterTasks = (tasks: Task[]): Task[] => {
     if (filters.length === 0) return tasks
     return tasks.filter(task => filters.every(filter => evaluateFilter(task, filter)))
+  }
+
+  const toggleTask = (taskId: string) => {
+    setTasks(tasks => tasks.map(task => 
+      task.id === taskId ? { ...task, checked: !task.checked } : task
+    ))
+  }
+
+  const addTask = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim()) return
+    
+    const selectedCategory = taskCategories.find(cat => cat.name === selectedTag)
+    
+    const newTask: Task = { 
+      id: Date.now().toString(),
+      text: input,
+      description: description || "Sem descrição",
+      tag: selectedTag,
+      emoji: selectedCategory?.emoji || "📝",
+      time: selectedTime,
+      dueDate: selectedDate,
+      priority: selectedPriority,
+      section: "hoje",
+      checked: false 
+    }
+    setTasks([...tasks, newTask])
+    setInput("")
+    setDescription("")
+    setSelectedTime("")
+    setSelectedPriority('medium')
+    setShowAddTask(false)
   }
 
   const FilterBuilder = () => (
@@ -303,55 +303,6 @@ export default function TaskBoard() {
     </div>
   )
 
-  const TaskList = ({ tasks }: { tasks: Task[] }) => (
-    <div className="space-y-1">
-      {tasks.map((task) => {
-        const categoryColor = taskCategories.find(cat => cat.name === task.tag)?.color || "bg-gray-100 text-gray-800"
-        const priorityColor = priorityLevels[task.priority].color
-        
-        return (
-          <div 
-            key={task.id} 
-            className="group flex flex-col gap-2 py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-4">
-              <input 
-                type="checkbox" 
-                checked={task.checked} 
-                onChange={() => toggleTask(task.id)} 
-                className="w-5 h-5 border-2 border-gray-300 rounded-full checked:bg-gray-800 checked:border-gray-800 cursor-pointer transition-colors"
-              />
-              <div className="flex-1">
-                <span className={`text-[15px] font-medium ${task.checked ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                  {task.text}
-                </span>
-                <p className="text-sm text-gray-500 mt-1">{task.description}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 text-sm ml-9">
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${priorityColor}`}>
-                {priorityLevels[task.priority].label}
-              </span>
-              
-              <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${categoryColor}`}>
-                {task.emoji} {task.tag}
-              </span>
-
-              {task.time && (
-                <span className="font-medium text-gray-500">{task.time}</span>
-              )}
-              
-              <span className="text-gray-500">
-                {new Date(task.dueDate).toLocaleDateString('pt-BR')}
-              </span>
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-
   return (
     <div className="flex-1 bg-white">
       <div className="max-w-4xl mx-auto p-8">
@@ -449,7 +400,52 @@ export default function TaskBoard() {
           )}
         </div>
 
-        <TaskList tasks={filterTasks(tasks)} />
+        <div className="space-y-1">
+          {filterTasks(tasks).map((task) => {
+            const categoryColor = taskCategories.find(cat => cat.name === task.tag)?.color || "bg-gray-100 text-gray-800"
+            const priorityColor = priorityLevels[task.priority].color
+            
+            return (
+              <div 
+                key={task.id} 
+                className="group flex flex-col gap-2 py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  <input 
+                    type="checkbox" 
+                    checked={task.checked} 
+                    onChange={() => toggleTask(task.id)} 
+                    className="w-5 h-5 border-2 border-gray-300 rounded-full checked:bg-gray-800 checked:border-gray-800 cursor-pointer transition-colors"
+                  />
+                  <div className="flex-1">
+                    <span className={`text-[15px] font-medium ${task.checked ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                      {task.text}
+                    </span>
+                    <p className="text-sm text-gray-500 mt-1">{task.description}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 text-sm ml-9">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${priorityColor}`}>
+                    {priorityLevels[task.priority].label}
+                  </span>
+                  
+                  <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${categoryColor}`}>
+                    {task.emoji} {task.tag}
+                  </span>
+
+                  {task.time && (
+                    <span className="font-medium text-gray-500">{task.time}</span>
+                  )}
+                  
+                  <span className="text-gray-500">
+                    {new Date(task.dueDate).toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
