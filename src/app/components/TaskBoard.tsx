@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-interface Task {
+export interface Task {
   id: string
   text: string
   description: string
@@ -13,6 +13,12 @@ interface Task {
   priority: 'high' | 'medium' | 'low'
   section: 'hoje' | 'equipe'
   checked: boolean
+}
+
+interface TaskBoardProps {
+  onTaskClick: (task: Task) => void
+  onTasksUpdate?: (tasks: Task[]) => void
+  initialTasks?: Task[]
 }
 
 const taskCategories = [
@@ -29,7 +35,7 @@ const priorityLevels = {
   low: { label: "Baixa", color: "bg-green-100 text-green-800" }
 }
 
-const initialTasks: Task[] = [
+const defaultTasks: Task[] = [
   { 
     id: '1',
     text: "Praticar 30 minutos de yoga",
@@ -80,8 +86,8 @@ const initialTasks: Task[] = [
   }
 ]
 
-export default function TaskBoard() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks)
+export default function TaskBoard({ onTaskClick, onTasksUpdate, initialTasks }: TaskBoardProps) {
+  const [tasks, setTasks] = useState<Task[]>(initialTasks || defaultTasks)
   const [searchQuery, setSearchQuery] = useState("")
   const [input, setInput] = useState("")
   const [description, setDescription] = useState("")
@@ -90,11 +96,22 @@ export default function TaskBoard() {
   const [selectedTime, setSelectedTime] = useState("")
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [showAddTask, setShowAddTask] = useState(false)
+  
+  useEffect(() => {
+    if (initialTasks) {
+      setTasks(initialTasks);
+    }
+  }, [initialTasks]);
 
   const toggleTask = (taskId: string) => {
-    setTasks(tasks => tasks.map(task => 
+    const updatedTasks = tasks.map(task => 
       task.id === taskId ? { ...task, checked: !task.checked } : task
-    ))
+    );
+    setTasks(updatedTasks);
+    
+    if (onTasksUpdate) {
+      onTasksUpdate(updatedTasks);
+    }
   }
 
   const addTask = (e: React.FormEvent) => {
@@ -115,7 +132,14 @@ export default function TaskBoard() {
       section: "hoje",
       checked: false 
     }
-    setTasks([...tasks, newTask])
+    
+    const updatedTasks = [...tasks, newTask];
+    setTasks(updatedTasks);
+    
+    if (onTasksUpdate) {
+      onTasksUpdate(updatedTasks);
+    }
+    
     setInput("")
     setDescription("")
     setSelectedTime("")
@@ -265,7 +289,8 @@ export default function TaskBoard() {
             return (
               <div 
                 key={task.id} 
-                className="group flex flex-col gap-2 py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors"
+                className="group flex flex-col gap-2 py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                onClick={() => onTaskClick(task)}
               >
                 <div className="flex items-center gap-4">
                   <input 

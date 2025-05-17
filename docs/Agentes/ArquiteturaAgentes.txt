@@ -1,0 +1,106 @@
+Ótimo! Focar nas primeiras funcionalidades é o caminho certo para construir incrementalmente sobre a arquitetura base. Vamos detalhar como as funcionalidades de "Chat Geral" e "Agente por Tarefa" se encaixam e utilizam o SDK de IA da Google (considerando o Gemini API e serviços relacionados como Vertex AI) dentro da estrutura proposta.
+
+Adaptando a Arquitetura para a Fase 1:
+
+A arquitetura de microserviços/agentes e o barramento de mensagens permanecem como a base. Para estas duas funcionalidades iniciais, precisaremos ativar e, em alguns casos, refinar o papel de alguns dos agentes e serviços previamente definidos:
+
+API Gateway: Continua sendo o ponto de entrada.
+
+Orquestrador: Ganha um papel crucial na distinção entre os dois tipos de interação (chat geral vs. chat contextual de tarefa). Ele precisará manter o "estado" atual da interação do usuário (está em um chat geral ou selecionou uma tarefa específica?).
+
+Barramento de Mensagens (Event Bus): Será usado para ações assíncronas que possam surgir (ex: durante um chat sobre tarefas, o usuário pede para adicionar um lembrete para uma delas).
+
+Agentes Ativados/Refinados:
+
+Agente NLU (Natural Language Understanding): Essencial para ambos os casos. Precisará ser capaz de entender a intenção e entidades tanto de queries gerais ("Quantas tarefas completei semana passada?") quanto de queries contextuais ("Como posso começar esta tarefa?"). O Orquestrador passará o contexto (se houver uma tarefa ativa) para o NLU.
+Agente NLG (Natural Language Generation): Essencial para gerar as respostas conversacionais em ambos os cenários. Receberá o resultado processado e o contexto (geral ou da tarefa) para gerar uma resposta natural e relevante.
+Agente de Gerenciamento de Tarefas: Sua responsabilidade primária continua sendo CRUD de tarefas. No entanto, na interação com o "Agente por Tarefa", ele será consultado frequentemente para obter detalhes da tarefa ativa.
+Agente de Informação e Conhecimento: Será importante para o chat geral (buscar informações sobre hábitos) e vital para o "Agente por Tarefa" (buscar informações relacionadas àquela tarefa específica).
+Agente de Personalização e Aprendizado: Fundamental para o chat geral (fornecer insights baseados no histórico) e útil no "Agente por Tarefa" (sugestões personalizadas para a tarefa).
+Agente de Histórico e Contexto do Usuário (Novo/Refinado): Poderíamos ter um agente específico ou expandir o Agente de Personalização para ser o responsável por acessar e sintetizar todos os dados históricos do usuário (tarefas, notas, logs de interação, etc.) para fornecer ao chat geral.
+Camada de Dados: Os bancos de dados de Tarefas, Perfil/Preferências e o Data Lake serão as fontes de informação.
+
+Infraestrutura de IA (Google AI SDK / Vertex AI):
+
+Os modelos do Google AI SDK (como o Gemini) serão utilizados dentro dos agentes apropriados, principalmente o NLU, NLG, Agente de Histórico/Contexto e Agente de Informação/Conhecimento.
+Vertex AI será a plataforma para deploy e servir esses modelos, garantindo escalabilidade e performance.
+Funcionalidade 1: Chat Geral sobre Comportamento e Histórico do Usuário
+
+Fluxo de Interação:
+
+Usuário inicia um chat geral no Cliente.
+Cliente envia a mensagem para o API Gateway.
+API Gateway autentica e roteia para o Orquestrador.
+Orquestrador identifica que é um chat geral (sem tarefa ativa selecionada) e gerencia o estado da conversa (histórico do diálogo).
+Orquestrador envia a mensagem do usuário e o histórico recente da conversa para o Agente NLU.
+Agente NLU (utilizando Gemini API - ex: gemini-pro) processa a mensagem para entender a intenção (ex: analisar_habitos, resumir_tarefas_concluidas) e extrair entidades (ex: periodo=semana passada, tipo_tarefa=trabalho).
+Agente NLU retorna intenção/entidades para o Orquestrador.
+Orquestrador, baseado na intenção, orquestra a obtenção dos dados necessários:
+Chama o Agente de Histórico e Contexto do Usuário.
+Este agente acessa os dados relevantes na Camada de Dados (BD de Tarefas, Data Lake com logs de interação).
+Uso do Google AI SDK aqui: O Agente de Histórico pode usar o Gemini API para processar e sintetizar grandes volumes de dados brutos de histórico do usuário (ex: passar descrições de 50 tarefas completadas e logs de tempo gasto para o Gemini sumarizar os temas e padrões). Isso transforma dados brutos em insights úteis.
+Agente de Histórico retorna os dados/insights sintetizados para o Orquestrador.
+Orquestrador envia os insights sintetizados, a mensagem original do usuário e o histórico da conversa para o Agente NLG.
+Agente NLG (utilizando Gemini API - ex: gemini-pro ou gemini-1.5-pro para contexto maior) gera uma resposta conversacional natural e contextualmente relevante, baseada nos insights e no histórico do chat.
+Agente NLG retorna a resposta de texto para o Orquestrador.
+Orquestrador atualiza o histórico da conversa e envia a resposta via API Gateway para o Cliente.
+Cliente exibe a resposta.
+Uso do Google AI SDK (Gemini) Específico:
+
+NLU: gemini-pro para entender a linguagem, intenções e extrair entidades, possivelmente com Function Calling para estruturar a saída.
+Agente de Histórico/Contexto: gemini-pro ou gemini-1.5-pro para sumarizar, analisar e encontrar padrões em grandes volumes de dados textuais e estruturados do usuário (passados via prompt).
+NLG: gemini-pro ou gemini-1.5-pro para gerar respostas conversacionais fluidas, mantendo o contexto do diálogo.
+Funcionalidade 2: Agente Específico por Tarefa (Chat Contextual)
+
+Fluxo de Interação:
+
+Usuário seleciona uma tarefa específica (Tarefa X) no Cliente.
+Cliente notifica o backend (via API Gateway para o Orquestrador) sobre a tarefa ativa selecionada (ex: /set-active-task {taskId: "X"}).
+Orquestrador registra que o usuário agora está no "modo tarefa" para a Tarefa X e potencialmente busca detalhes básicos da Tarefa X usando o Agente de Gerenciamento de Tarefas.
+Usuário digita uma mensagem no chat enquanto a Tarefa X está selecionada.
+Cliente envia a mensagem e o ID da Tarefa X ativa para o API Gateway.
+API Gateway autentica e roteia para o Orquestrador.
+Orquestrador identifica que é um chat contextual (com Tarefa X ativa) e gerencia o histórico deste chat contextual.
+Orquestrador envia a mensagem do usuário, o histórico deste chat e os detalhes da Tarefa X para o Agente NLU.
+Agente NLU (utilizando Gemini API) processa a mensagem, agora levando em conta o contexto da Tarefa X. A query "Break this down" será interpretada no contexto da descrição da Tarefa X ("Planejar apresentação para a diretoria").
+Agente NLU retorna intenção (ex: detalhar_tarefa, buscar_informacao_relacionada) e entidades para o Orquestrador.
+Orquestrador, baseado na intenção e na Tarefa X, orquestra as ações:
+Se detalhar_tarefa: O Orquestrador pode chamar o Agente de Gerenciamento de Tarefas (para obter detalhes completos) e, possivelmente, o Agente de Personalização (para sugestões de como quebrar este tipo de tarefa para este usuário).
+Se buscar_informacao_relacionada: O Orquestrador chama o Agente de Informação e Conhecimento, passando os detalhes da Tarefa X como query.
+Uso do Google AI SDK aqui: O Agente de Informação/Conhecimento pode usar o Gemini API para realizar RAG (Retrieval Augmented Generation): buscar documentos/notas/web relacionados à Tarefa X e usar o Gemini para sintetizar uma resposta baseada nessas fontes, contextualizada pela Tarefa X.
+Os agentes chamados retornam seus resultados (detalhes da tarefa, informações encontradas, sugestões) para o Orquestrador.
+Orquestrador reúne todo o contexto relevante (mensagem original, histórico deste chat, detalhes da Tarefa X, resultados dos outros agentes) e envia para o Agente NLG.
+Agente NLG (utilizando Gemini API, aproveitando a grande janela de contexto para incluir todos os detalhes da tarefa e resultados relevantes) gera uma resposta conversacional que é diretamente útil e relevante para a Tarefa X selecionada. Pode até sugerir ações específicas ("Posso adicionar 'Pesquisar concorrentes' como sub-tarefa?").
+Agente NLG retorna a resposta de texto (e possíveis ações sugeridas) para o Orquestrador.
+Orquestrador atualiza o histórico deste chat contextual e envia a resposta via API Gateway para o Cliente.
+Cliente exibe a resposta, mantendo o foco na Tarefa X.
+Se o usuário aceita uma sugestão de ação (ex: adicionar sub-tarefa), o Cliente envia uma nova requisição para o API Gateway/Orquestrador, que acionará o Agente de Gerenciamento de Tarefas para modificar a Tarefa X.
+Uso do Google AI SDK (Gemini) Específico:
+
+NLU: gemini-pro ou gemini-1.5-pro. O contexto da Tarefa X é essencial e deve ser passado para o modelo para interpretação correta. A capacidade de Funções do Gemini pode ser útil para identificar ações específicas que o usuário deseja realizar na tarefa.
+Agente de Informação/Conhecimento: gemini-pro ou gemini-1.5-pro para RAG, sumarização e extração de informações de fontes externas/internas relacionadas à Tarefa X.
+Agente de Personalização: Gemini pode ser usado para inferir sugestões baseadas no histórico de tarefas similares.
+NLG: gemini-pro ou gemini-1.5-pro. A chave é passar todo o contexto da Tarefa X e os resultados do processamento para gerar respostas altamente relevantes e acionáveis sobre aquela tarefa. A capacidade de manter o histórico do chat contextual é vital.
+Infraestrutura Google AI SDK (Vertex AI):
+
+Os modelos Gemini serão deployados e gerenciados no Vertex AI. Isso permite:
+Escalabilidade automática para lidar com o volume de requisições.
+Monitoramento de performance e latência.
+Gerenciamento de versões de modelos.
+Possibilidade de fine-tuning dos modelos no futuro com dados próprios (embora Gemini base já seja muito capaz).
+A comunicação entre seus agentes e os modelos deployados no Vertex AI será via API calls (síncronas).
+Vantagens desta abordagem inicial com Gemini:
+
+Poder NLU/NLG Imediato: O Gemini oferece capacidades de compreensão e geração de linguagem de ponta prontas para usar, acelerando o desenvolvimento das funcionalidades centrais de chat.
+Contexto Rico: A capacidade do Gemini (especialmente 1.5 Pro) de lidar com grandes contextos é ideal para o chat geral (histórico do usuário) e, crucialmente, para o chat contextual por tarefa (detalhes da tarefa, notas relacionadas, histórico do chat).
+RAG Facilitado: O Gemini é uma base forte para construir o Agente de Informação/Conhecimento, permitindo que ele não apenas busque informações, mas as processe e apresente de forma conversacional.
+Iteração: Você pode começar usando os modelos base do Gemini e, conforme coleta mais dados e entende melhor os padrões de interação do usuário, pode considerar fine-tuning ou modelos menores e mais especializados para otimizar performance e custo em casos de uso específicos.
+Plataforma Gerenciada (Vertex AI): Reduz a complexidade de gerenciar a infraestrutura de serving dos modelos de IA.
+Considerações para Implementação Inicial:
+
+Gerenciamento de Estado: O Orquestrador (ou um serviço auxiliar) precisará gerenciar qual modo de chat o usuário está (geral ou tarefa) e qual tarefa está ativa. O histórico de conversa para cada modo também precisa ser gerenciado.
+Custo: Utilizar modelos grandes como Gemini pode ter custos associados ao uso da API (baseado em tokens). Monitore o uso e otimize prompts.
+Latência: Embora o Gemini seja otimizado para servir, a latência das chamadas de API deve ser considerada no fluxo síncrono, especialmente no chat contextual onde várias chamadas encadeadas podem ocorrer. Caching e design eficiente dos prompts são importantes.
+Fallback: Pense em como o sistema se comportará se o agente de IA não entender a requisição (ex: retornar uma mensagem padrão "Desculpe, não entendi...").
+Segurança e Privacidade: Ao enviar dados do usuário (histórico, detalhes da tarefa) para a API do Gemini (ou qualquer LLM externo), entenda as políticas de privacidade e uso de dados do provedor. O Vertex AI geralmente oferece opções mais robustas de privacidade e controle de dados do que APIs públicas.
+Esta estrutura inicial permite que você construa e teste as funcionalidades de chat e interação contextual, utilizando o poder do Google AI SDK onde ele agrega mais valor (NLU avançado, NLG conversacional, processamento de texto rico e contexto), enquanto mantém a flexibilidade e escalabilidade da arquitetura de microserviços para adicionar mais agentes e funcionalidades no futuro.

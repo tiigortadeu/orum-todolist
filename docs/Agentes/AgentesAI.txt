@@ -1,0 +1,245 @@
+Documento de Arquitetura e Implementação para Agentes de Chat de IA
+
+Sistema Existente: Sistema de Gerenciamento de Tarefas
+Componentes a Implementar/Integrar: Camada de Chat de IA
+
+Versão: 1.0
+Data: 17 de Maio de 2025
+
+1. Introdução
+
+Este documento detalha a arquitetura e as diretrizes para a implementação e integração de capacidades de chat baseadas em Inteligência Artificial no Sistema de Gerenciamento de Tarefas existente. O objetivo é adicionar duas funcionalidades principais de chat: um chat geral sobre o histórico do usuário e um chat contextual específico para cada tarefa, utilizando uma arquitetura de agentes e o Google AI SDK/Vertex AI.
+
+2. Escopo da Implementação
+
+2.1. Inclusões
+
+A implementação abordada por este documento inclui o design, desenvolvimento e deploy dos seguintes componentes:
+
+Orchestrator / Gerenciador de Fluxos: Serviço central para receber requisições de chat, identificar contexto, orquestrar chamadas aos agentes e serviços (novos e existentes), e gerenciar o estado básico do chat.
+Agente NLU (Natural Language Understanding): Serviço responsável por processar texto de entrada, identificar a intenção do usuário e extrair entidades, considerando o contexto (geral ou da tarefa).
+Agente NLG (Natural Language Generation): Serviço responsável por gerar respostas em linguagem natural, coerentes e contextuais, a partir de dados processados e insights.
+Agente de Histórico e Contexto do Usuário: Serviço responsável por acessar e sintetizar dados relevantes do histórico do usuário (utilizando APIs ou acesso read-only ao banco de dados do sistema existente).
+Agente de Informação e Conhecimento: Serviço responsável por buscar informações relevantes (internas ou externas) relacionadas a uma query ou contexto específico.
+Event Bus / Barramento de Mensagens: Implementação da infraestrutura de mensagens assíncronas para desacoplamento e comunicação eficiente entre os novos agentes e o sistema existente (quando aplicável).
+Integração com Google AI SDK / Vertex AI: Configuração e utilização das APIs e infraestrutura do Google para servir os modelos de IA (principalmente para NLU e NLG, e possivelmente para processamento em outros agentes).
+Pontos de Integração (APIs): Definição e implementação das APIs que os novos agentes utilizarão para interagir com os serviços do sistema de gerenciamento de tarefas existente (ex: obter detalhes da tarefa, atualizar tarefa, consultar histórico) e das novas APIs que a interface do cliente consumirá para as funcionalidades de chat.
+Adaptações na Interface do Cliente Existente: Requisitos de como a interface do cliente (Web/Mobile) precisará ser modificada para interagir com os novos pontos de integração de chat (UI dos chats, passagem do contexto da tarefa selecionada).
+2.2. Exclusões
+
+Este documento não cobre:
+
+A re-implementação ou modificação da lógica central do sistema de gerenciamento de tarefas (CRUD de tarefas, autenticação/autorização base). Assume-se que estes serviços já existem e expõem APIs consumíveis.
+O design detalhado da UI/UX das interfaces de chat no cliente.
+Estratégias complexas de fine-tuning de modelos de IA (foco na utilização dos modelos base via API).
+Funcionalidades de IA proativas que não são acionadas por uma interação direta de chat.
+3. Arquitetura de Integração
+
+A nova camada de Chat de IA será construída ao redor do sistema de gerenciamento de tarefas existente. O Orchestrator será o ponto central de orquestração das interações de chat, comunicando-se tanto com os novos Agentes de IA quanto com os serviços existentes do sistema de tarefas. O Event Bus será a espinha dorsal para comunicação assíncrona.
+
++-------------------+       +----------------------+       +-----------------------+
+|   Client Layer    | ----> |     API Gateway      | ----> |      Orchestrator     |
+| (Existing UI +    |       |    (Existing)        |       |     (NEW Service)     |
+|   Chat UI Mods)   |       | (Routes to existing  |       |                       |
++-------------------+       |   services & NEW     |       +-----------+-----------+
+                            |   Chat Endpoints)    |                   |
+                            +----------+-----------+                   | (Sync API Calls)
+                                       |                               |
+                                       | (Sync API Calls)              |
+                                       |                               v
++------------------------------------------------------------------------------------+
+|                     NEW Layer: AI Chat Agents                                      |
+|                                                                                    |
+| +---------------+   +---------------+   +-----------------+   +-----------------+  |
+| |  NLU Agent  |-->|   NLG Agent   |   | History/Context |   | Information Rtrv|  |
+| | (NEW Service)|   | (NEW Service)|   |  Agent (NEW)    |   |  Agent (NEW)    |  |
+| | (Uses Gemini)|   | (Uses Gemini)|   |                 |   |  (Uses Gemini)  |  |
+| +-------+-------+   +-------+-------+   +--------+--------+   +--------+--------+  |
+|         |                   ^                     |                     |          |
+|         |                   |                     |                     |          |
+|         +-------------------+---------------------+---------------------+          |
+|                             |   (Async Events)                                     |
+|                             |                                                      |
++-----------------------------+------------------------------------------------------+
+                              |
+                              | (Consumes & Publishes Events)
+                              v
++-------------------------+
+|     Event Bus           |
+|  (NEW Infrastructure)   |
+| (Kafka, RabbitMQ, etc.) |
++-------------------------+
+          ^       ^
+          |       | (Consumes Events / Triggers Actions)
+          |       |
++---------+-------+---------+      +-------------------------+
+|   EXISTING System Services  | <--> |   EXISTING Data Layer   |
+|                             |      | (Task DB, User DB, Logs)|
+| +-------------------------+ |      +-------------------------+
+| | Task Management Service | |
+| |  (Existing - Exposes   | |      (NEW Agents interact with
+| |     APIs)             | |       Existing Data Layer ideally
+| +-------------------------+ |       via Existing Services' APIs)
+| | User Management Service | |
+| |  (Existing - Exposes   | |
+| |     APIs)             | |
+| +-------------------------+ |
+| | Notification Service    | |
+| |  (Existing - Exposes   | |
+| |     APIs / Consumes   | |
+| |     Events)           | |
+| +-------------------------+ |
++-----------------------------+
+
++-------------------------------+
+|     Google AI Infrastructure  |
+|   (Vertex AI Model Serving)   |
+| (Used by NLU, NLG, etc. Agents)|
++-------------------------------+
+4. Design Detalhado dos Componentes (Novos)
+
+Cada componente novo deve ser implementado como um microserviço independente, comunicando-se via API síncrona (para requisições diretas como processamento de chat) e Event Bus assíncrono (para eventos ou ações em background).
+
+4.1. Orchestrator (NEW Service)
+
+Responsabilidades:
+Receber requisições de chat do API Gateway.
+Identificar o tipo de chat (Geral ou Específico por Tarefa). Para chat de tarefa, extrair o taskId da requisição.
+Gerenciar o estado básico da sessão de chat (manter histórico recente da conversa). O histórico deve ser separado por usuário e, no caso de chat de tarefa, por taskId.
+Orquestrar a sequência de chamadas para processar a requisição:
+Chamar o Agente NLU passando o texto do usuário e o contexto (geral ou taskId e detalhes da tarefa).
+Baseado na intenção e contexto, chamar serviços existentes (ex: Serviço de Gerenciamento de Tarefas para obter detalhes da tarefa) e/ou novos agentes (ex: Agente de Histórico, Agente de Informação).
+Coletar os resultados de todas as chamadas intermediárias.
+Chamar o Agente NLG passando o resultado consolidado e o contexto completo (texto original, histórico relevante, detalhes da tarefa, insights, informações encontradas) para gerar a resposta final em linguagem natural.
+Encaminhar a resposta do Agente NLG de volta para o API Gateway.
+Processar sugestões de ações recebidas do Agente NLG e, se confirmadas pelo usuário (via API separada do cliente), orquestrar a chamada aos serviços existentes (ex: Serviço de Gerenciamento de Tarefas para adicionar subtarefa).
+Tecnologia: Linguagem e framework adequados para orquestração de serviços (pode ser alinhado com a stack existente ou uma nova, ex: Spring Boot, Node.js, Python/FastAPI).
+4.2. Agente NLU (NEW Service)
+
+Responsabilidades:
+Receber texto do usuário e um objeto de contexto ({ type: 'general' } ou { type: 'task', taskId: '...', taskDetails: {...} }).
+Utilizar o Google AI SDK (Gemini API) para processar o texto e o contexto.
+Identificar a intenção principal do usuário (ex: criar_tarefa, perguntar_historico, buscar_info_tarefa, detalhar_tarefa).
+Extrair entidades relevantes (ex: descrição da tarefa, data, tipo de informação, nomes).
+Retornar um objeto estruturado contendo a intenção, entidades e um score de confiança para o Orchestrator.
+Integração Google AI SDK: Chamar a Gemini API (via Vertex AI Endpoint) com o texto do usuário + contexto no prompt. Pode explorar o Function Calling do Gemini para receber a intenção e entidades de forma estruturada.
+Tecnologia: Serviço com dependência no SDK do Google Cloud/Vertex AI.
+4.3. Agente NLG (NEW Service)
+
+Responsabilidades:
+Receber um objeto estruturado contendo:
+O resultado processado da requisição (ex: dados do histórico, detalhes da tarefa, informações encontradas).
+O contexto completo da interação (texto original do usuário, histórico recente do chat, detalhes da tarefa ativa, insights do usuário).
+Utilizar o Google AI SDK (Gemini API) para gerar uma resposta em linguagem natural que seja:
+Coerente com o histórico do chat.
+Relevante para a tarefa ativa (se houver).
+Precisa com base nos dados/insights fornecidos.
+Conversacional e útil.
+(Opcional/Avançado) Utilizar o Function Calling ou capabilities do LLM para sugerir ações estruturadas que a interface do cliente possa apresentar como botões (ex: "Sugerir adicionar subtarefas [lista]", "Sugerir definir lembrete [data/hora]").
+Retornar o texto da resposta e, se aplicável, as sugestões de ações estruturadas para o Orchestrator.
+Integração Google AI SDK: Chamar a Gemini API (via Vertex AI Endpoint) com o resultado processado e todo o contexto reunido no prompt. A janela de contexto do modelo (ex: Gemini 1.5 Pro) é crucial aqui.
+Tecnologia: Serviço com dependência no SDK do Google Cloud/Vertex AI.
+4.4. Agente de Histórico e Contexto do Usuário (NEW Service)
+
+Responsabilidades:
+Receber requisições do Orchestrator (ex: getHabitSummaryForUser(userId, timePeriod), getInsightsOnTaskType(userId, taskType)).
+Acessar os dados históricos do usuário nos bancos de dados existentes (preferencialmente via APIs existentes do Serviço de Gerenciamento de Tarefas e Serviço de Gerenciamento de Usuários; se necessário, acesso read-only direto ao DB de logs/histórico com cautela e otimização).
+Processar e sintetizar estes dados brutos para extrair insights relevantes.
+Uso Potencial do Google AI SDK: Pode usar Gemini (ou outros modelos no Vertex AI) para analisar grandes volumes de texto (ex: notas de tarefas, descrições de tarefas passadas) ou logs para identificar padrões e gerar resumos.
+Retornar os insights ou dados sintetizados para o Orchestrator.
+Integração: Chamar APIs do sistema existente. Acesso ao DB existente (se autorizado e necessário).
+Tecnologia: Serviço com lógica de acesso e processamento de dados históricos.
+4.5. Agente de Informação e Conhecimento (NEW Service)
+
+Responsabilidades:
+Receber requisições do Orchestrator (ex: searchRelatedInfo(query, context)).
+Buscar informações relevantes em:
+Fontes internas (ex: notas do usuário não ligadas a tarefas específicas, documentos carregados - se o sistema existente suportar).
+Fontes externas (ex: Google Search API, outras APIs de conhecimento).
+Processar os resultados da busca.
+Uso Potencial do Google AI SDK: Utilizar Gemini (ou outros modelos no Vertex AI) para técnicas de RAG (Retrieval Augmented Generation), onde os resultados da busca são fornecidos ao LLM para que ele gere uma resposta coerente baseada nesses resultados. Pode usar o LLM para sumarizar documentos encontrados.
+Retornar as informações processadas/sintetizadas para o Orchestrator.
+Integração: Chamar APIs de busca externas/internas, acessar DB interno (para notas gerais, etc.).
+Tecnologia: Serviço com lógica de busca e processamento de resultados, integração com APIs de terceiros e SDK do Google Cloud.
+4.6. Event Bus (NEW Infrastructure)
+
+Tecnologia: Plataforma de Mensagens Assíncronas (ex: Apache Kafka, RabbitMQ, Google Cloud Pub/Sub, AWS SQS/SNS, Azure Service Bus).
+Uso Inicial:
+Novos agentes publicam eventos de interesse (ex: UserChatInteractionLogged, InsightGenerated).
+Serviços existentes ou novos podem consumir estes eventos para logging, monitoramento ou acionamento de workflows assíncronos (ex: Agente de Notificação consumindo um evento LembreteDisparado publicado por um futuro Agente de Agendamento, que poderia ser acionado via chat).
+5. Estratégia de Integração com o Sistema Existente
+
+Consumindo Serviços Existentes: Os novos agentes (Orchestrator, Histórico, Informação) devem consumir as APIs RESTful (ou outro protocolo, ex: gRPC) expostas pelos serviços existentes (Gerenciamento de Tarefas, Gerenciamento de Usuários). Novos endpoints nas APIs existentes podem ser necessários se os atuais não forem suficientes para as necessidades dos agentes (ex: endpoint para buscar todas as notas de um usuário, endpoint para buscar tarefas por tag e período).
+Expondo Novos Serviços (Chat API): O Orchestrator DEVE expor novos endpoints através do API Gateway existente para que o Cliente possa interagir.
+POST /chat/general: Para mensagens do chat geral. Payload: { userId: '...', message: '...', conversationId: '...' }
+POST /chat/task/{taskId}: Para mensagens do chat específico da tarefa. Payload: { userId: '...', message: '...', conversationId: '...' }
+POST /task/{taskId}/chat/action: Para o cliente confirmar uma ação sugerida pelo chat. Payload: { userId: '...', actionDetails: {...} }
+GET /task/{taskId}/chat/history: Para carregar o histórico de um chat de tarefa específico.
+Acesso ao Banco de Dados Existente: Acesso direto dos novos agentes aos bancos de dados existentes DEVE ser minimizado. Se absolutamente necessário (ex: para processamento em lote de histórico pelo Agente de Histórico), DEVE ser acesso somente leitura e otimizado para não impactar as operações transacionais do sistema existente. Idealmente, exponha endpoints nas APIs existentes para fornecer os dados necessários.
+Modificações no Cliente: A interface do usuário existente precisará ser adaptada para:
+Adicionar as interfaces de chat (geral e contextual por tarefa).
+Capturar a seleção de uma tarefa pelo usuário e "entrar" no modo de chat da tarefa, enviando o taskId nas requisições subsequentes para o Orchestrator.
+Enviar mensagens para os endpoints corretos do Orchestrator (/chat/general ou /chat/task/{taskId}).
+Renderizar as respostas da IA, incluindo texto e sugestões de ações estruturadas (se aplicável).
+Gerenciar a visualização do histórico de chat (separado por chat geral e por tarefa).
+6. Integração com Google AI SDK / Vertex AI
+
+Conta Google Cloud: Configurar uma conta Google Cloud com faturamento habilitado.
+Habilitar APIs: Habilitar as APIs necessárias, como Vertex AI API e, potencialmente, APIs de busca (ex: Custom Search API se for usar busca web).
+Vertex AI Endpoints: Deployar modelos Gemini (ou outros modelos necessários) como endpoints no Vertex AI. Os agentes (NLU, NLG, Histórico, Informação) farão chamadas HTTP/gRPC para estes endpoints.
+SDKs: Utilizar os SDKs do Google Cloud para a linguagem de desenvolvimento dos seus agentes para facilitar a interação com o Vertex AI e outras APIs do Google.
+Gerenciamento de Credenciais: Utilizar Service Accounts do Google Cloud e gerenciamento seguro de credenciais para que seus agentes possam autenticar e chamar as APIs do Google.
+7. Requisitos Não Funcionais (Considerações de Implementação)
+
+Performance: O tempo de resposta dos agentes de IA, especialmente NLU e NLG, é crítico para a experiência do chat. Otimizar prompts, utilizar modelos adequados e garantir baixa latência na comunicação com o Vertex AI são essenciais. O acesso eficiente aos dados históricos e de tarefa também impacta a performance.
+Escalabilidade: Cada novo agente (Orchestrator, NLU, NLG, Histórico, Informação) DEVE ser projetado para escalar horizontalmente, implantando múltiplas instâncias conforme a carga aumenta. O Event Bus e o Vertex AI são escaláveis por natureza.
+Confiabilidade: Implementar retry mechanisms, circuit breakers (para chamadas síncronas entre agentes e serviços existentes) e dead-letter queues (para o Event Bus) para lidar com falhas temporárias.
+Segurança: Implementar autenticação e autorização entre os novos agentes e os serviços existentes. Proteger as APIs do Orchestrator no API Gateway. Garantir que as chamadas para o Google AI SDK/Vertex AI são autenticadas e seguras. Proteger dados sensíveis do usuário ao passá-los no contexto para os modelos de IA (anonimização, minimização de dados).
+Observabilidade: Implementar logging estruturado, métricas (latência, erros, uso de recursos por agente) e distributed tracing nos novos serviços. Isso é vital para depurar fluxos complexos que envolvem múltiplos serviços novos e existentes.
+Gerenciamento de Estado: O gerenciamento do histórico do chat (por usuário e por tarefa) deve ser robusto e eficiente. Pode ser armazenado em um cache (Redis) ou em um banco de dados otimizado para acesso rápido por userId e taskId.
+8. Etapas de Implementação (Sugestão)
+
+Configuração da Infraestrutura Base:
+Configurar a conta Google Cloud e habilitar APIs.
+Configurar o Event Bus (Kafka/RabbitMQ ou similar).
+Garantir acesso (API ou read-only) aos dados do sistema existente.
+Planejar o deploy dos novos microserviços (Kubernetes, VMs, Cloud Run/Functions).
+Desenvolvimento dos Agentes Core de IA:
+Implementar o Agente NLU com integração ao Gemini API.
+Implementar o Agente NLG com integração ao Gemini API.
+Deployar modelos Gemini no Vertex AI e configurar endpoints.
+Desenvolvimento dos Agentes de Suporte e Acesso a Dados:
+Implementar o Agente de Histórico e Contexto, integrando com APIs ou DBs existentes.
+Implementar o Agente de Informação e Conhecimento, integrando com APIs de busca/DBs.
+Desenvolvimento do Orchestrator:
+Implementar a lógica de recebimento de requisições do API Gateway.
+Implementar o roteamento para NLU e a coleta de contexto.
+Implementar a orquestração de chamadas para agentes de suporte e serviços existentes.
+Implementar a chamada final para NLG e retorno da resposta.
+Implementar o gerenciamento básico do estado do chat.
+Implementar a lógica de processamento de ações sugeridas.
+Integração com Serviços Existentes:
+Refinar APIs existentes conforme necessário para atender aos agentes.
+Implementar as chamadas dos novos agentes para as APIs existentes.
+Adaptações na Interface do Cliente:
+Desenvolver a UI/UX das interfaces de chat.
+Implementar a lógica de seleção de tarefa para ativar o modo contextual.
+Implementar a comunicação com os novos endpoints do Orchestrator via API Gateway.
+Implementar a exibição das respostas e ações sugeridas.
+Testes:
+Testes unitários para cada agente.
+Testes de integração entre os novos agentes e entre os novos agentes e serviços existentes.
+Testes de performance e carga.
+Testes de aceitação do usuário para as funcionalidades de chat.
+Deploy:
+Definir e implementar a estratégia de deploy para os novos microserviços.
+Configurar monitoramento e logging.
+9. Monitoramento e Logging
+
+Implementar um sistema robusto de monitoramento e logging distribuído é fundamental para esta arquitetura.
+
+Logging Estruturado: Todos os agentes devem logar eventos importantes em um formato estruturado (JSON) que inclua IDs de correlação (tracing) para rastrear uma requisição através de múltiplos serviços.
+Métricas: Coletar métricas por serviço (tempo de resposta, vazão, taxa de erro, uso de recursos) e métricas de IA (número de chamadas para LLM, latência do LLM, custo de token).
+Distributed Tracing: Utilizar uma ferramenta de tracing (ex: Jaeger, Zipkin, Google Cloud Trace) para visualizar o fluxo completo de uma requisição através do Orchestrator, agentes novos e serviços existentes. Essencial para identificar gargalos.
+Alertas: Configurar alertas baseados nas métricas e logs para detectar problemas rapidamente.
+Este documento serve como um guia técnico para a equipe de desenvolvimento implementar a camada de chat de IA e integrá-la ao sistema existente, seguindo a arquitetura de agentes e utilizando as ferramentas do Google AI SDK/Vertex AI. Ele detalha os componentes a serem construídos, como eles interagem e quais considerações técnicas são importantes para uma implementação bem-sucedida.

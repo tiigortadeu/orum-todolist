@@ -1,0 +1,70 @@
+Perfeito! Vamos focar exclusivamente nos agentes e suas funções dentro do escopo das funcionalidades de chat (Geral e Contextual por Tarefa), utilizando os nomes que você sugeriu ("Agente Entendedor", "Agente Consultor") e adicionando os necessários.
+
+Para a funcionalidade de chat, os agentes essenciais e componentes de orquestração serão os seguintes:
+
+Orquestrador (Não é um "Agente" no sentido de processar conteúdo de IA, mas é o Maestro)
+Agente NLU (Entendedor)
+Agente(s) Consultor(es) (Vamos refinar este, pois "consultar a base" pode significar diferentes bases)
+Agente NLG (Gerador)
+Aqui estão eles, com suas funções específicas para o chat:
+
+Agentes e Funções para a Arquitetura de Chat de IA
+
+Foco: Funcionalidades de Chat Geral e Chat Contextual por Tarefa.
+
+Orquestrador
+
+Função para o Chat:
+Receber a entrada de texto do usuário via API Gateway.
+Identificar o contexto da interação: É um chat Geral ou um chat Específico de Tarefa (e qual taskId está ativo)?
+Gerenciar e manter o estado da conversa (histórico do chat) para a sessão correta (geral ou por tarefa).
+Encaminhar o texto do usuário, juntamente com o contexto relevante (histórico, taskId, detalhes da tarefa ativa), para o Agente NLU.
+Interpretar o resultado do Agente NLU (intenção, entidades, tipo de query).
+Com base na intenção e contexto, orquestrar as chamadas subsequentes para os Agentes Consultores apropriados (Histórico, Informação) e/ou interagir com os serviços existentes (ex: chamar API do Serviço de Gerenciamento de Tarefas para obter detalhes completos).
+Coletar e consolidar os resultados de todas as consultas e interações intermediárias.
+Enviar os resultados consolidados e todo o contexto da interação para o Agente NLG.
+Receber a resposta gerada pelo Agente NLG.
+Encaminhar a resposta final de texto de volta para o cliente via API Gateway.
+Processar sugestões de ações recebidas do Agente NLG e gerenciar a confirmação/execução dessas ações no sistema existente.
+Agente NLU (Entendedor de Linguagem Natural)
+
+Função para o Chat:
+Receber a entrada de texto do usuário e o contexto da interação (geral ou tarefa ativa).
+Utilizar modelos de IA (Google AI SDK/Gemini) para analisar semanticamente o texto.
+Identificar a Intenção do usuário (ex: perguntar_historico_tarefas, buscar_info_sobre, detalhar_passos, criar_lembrete, atualizar_tarefa). A intenção pode ser influenciada pelo contexto (ex: "Como começo isso?" em um chat de tarefa vs. chat geral).
+Extrair Entidades relevantes mencionadas na frase (ex: datas, horários, nomes, tipos de tarefa, tópicos de informação).
+Classificar o Tipo da Query (ex: pergunta sobre histórico, pedido de informação, solicitação de ação). Esta classificação ajuda o Orquestrador a decidir quais agentes consultar em seguida.
+Retornar a Intenção, Entidades e Tipo da Query (estruturados) para o Orquestrador.
+Agentes Consultores (Responsáveis por Acessar e Processar Bases de Conhecimento)
+
+Este papel se divide em agentes especializados pelas fontes de informação:
+
+3a. Agente Consultor de Histórico e Contexto do Usuário
+
+Função para o Chat (Ativado pelo Orquestrador):
+Receber requisições baseadas em intenções e entidades relacionadas ao histórico do usuário (ex: "Quais tarefas completei em maio?").
+Acessar os dados do usuário no sistema existente (registros de tarefas, logs de interação, notas gerais - preferencialmente via APIs do sistema existente).
+Processar, filtrar e sintetizar dados brutos do histórico para responder à query específica no contexto do chat.
+Uso de IA (Google AI SDK/Gemini): Pode utilizar LLMs para analisar grandes volumes de texto (notas, descrições de tarefas passadas) ou logs e gerar resumos ou identificar padrões relevantes.
+Retornar dados ou insights relevantes (estruturados ou textuais) para o Orquestrador.
+3b. Agente Consultor de Informação e Conhecimento Geral
+
+Função para o Chat (Ativado pelo Orquestrador):
+Receber requisições baseadas em intenções e entidades que requerem conhecimento externo ou geral (ex: "Qual a melhor forma de organizar arquivos digitais?", "Busque informações sobre X [relacionado à tarefa ativa]").
+Buscar informações em fontes configuradas (internet via API de busca, base de conhecimento interna, documentos anexados à tarefa).
+Processar e sintetizar as informações encontradas.
+Uso de IA (Google AI SDK/Gemini): Essencial para RAG (Retrieval Augmented Generation) - utilizar o LLM para ler os resultados da busca e gerar uma resposta coerente e relevante baseada nesses resultados, no contexto da query e da tarefa.
+Retornar as informações processadas/sintetizadas para o Orquestrador.
+Agente NLG (Gerador de Linguagem Natural)
+
+Função para o Chat:
+Receber os resultados consolidados do processamento (dados históricos, informações encontradas, detalhes da tarefa, etc.) e o contexto completo da interação (query original, histórico do chat, detalhes da tarefa ativa, insights do usuário).
+Utilizar modelos de IA (Google AI SDK/Gemini, aproveitando a janela de contexto) para gerar a resposta final em linguagem natural.
+A resposta DEVE ser:
+Gramaticalmente correta e fluida.
+Coerente com o histórico deste chat (geral ou da tarefa específica).
+Altamente relevante e específica para a query e o contexto fornecido.
+Apresentar os dados ou informações de forma compreensível e conversacional.
+(Opcional) Gerar sugestões de ações estruturadas que o cliente possa apresentar como botões, baseadas no contexto e na resposta.
+Retornar o texto da resposta (e sugestões de ação, se houver) para o Orquestrador.
+Esta é a estrutura dos agentes e componentes principais focados exclusivamente na funcionalidade de chat. Eles colaboram sob a coordenação do Orquestrador para entender a entrada do usuário, consultar as bases de conhecimento necessárias (histórico e geral) e gerar uma resposta inteligente e contextualizada. A força do Google AI SDK/Gemini é utilizada principalmente nos agentes que envolvem processamento profundo de linguagem (NLU, NLG) e síntese de informações (Consultores).
