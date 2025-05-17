@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { CategoryProvider } from '@/lib/contexts/CategoryContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Orumaiv',
-  description: 'Your AI Assistant',
+  description: 'Your personal AI assistant',
 }
 
 export default function RootLayout({
@@ -19,7 +20,11 @@ export default function RootLayout({
       <head>
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
       </head>
-      <body className={inter.className}>{children}</body>
+      <body className="font-sans antialiased">
+        <CategoryProvider>
+          {children}
+        </CategoryProvider>
+      </body>
     </html>
   )
 } 

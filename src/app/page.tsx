@@ -8,7 +8,7 @@ import type { Task } from './components/TaskBoard'
 import { syncTasksFromFrontend } from '@/lib/db/tasks'
 
 // Tarefas iniciais definidas aqui para garantir consistência
-const initialTasks = [
+const initialTasks: Task[] = [
   { 
     id: '1',
     text: "Praticar 30 minutos de yoga",
@@ -60,71 +60,64 @@ const initialTasks = [
 ];
 
 export default function Home() {
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
-  const [isChatOpen, setIsChatOpen] = useState(false)
-  const [tasks, setTasks] = useState<Task[]>(initialTasks)
-
-  // Sincroniza as tarefas iniciais com o banco de dados em memória quando o componente monta
+  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  
+  // Sincroniza tarefas no localStorage
   useEffect(() => {
-    // Inicializa o banco de dados em memória uma única vez na montagem
-    syncTasksFromFrontend(initialTasks);
-    console.log("Tarefas iniciais sincronizadas com o banco de dados em memória:", initialTasks);
+    // Tenta carregar tarefas do localStorage
+    try {
+      const savedTasks = localStorage.getItem('tasks');
+      if (savedTasks) {
+        setTasks(JSON.parse(savedTasks));
+      }
+    } catch (error) {
+      console.error('Erro ao carregar tarefas do localStorage:', error);
+    }
   }, []);
-
-  // Recebe tarefas do componente TaskBoard
+  
+  useEffect(() => {
+    // Salva tarefas no localStorage quando elas são atualizadas
+    try {
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    } catch (error) {
+      console.error('Erro ao salvar tarefas no localStorage:', error);
+    }
+  }, [tasks]);
+  
+  // Quando uma tarefa é atualizada, atualiza o estado e as tarefas
   const handleTasksUpdate = (updatedTasks: Task[]) => {
-    setTasks(updatedTasks)
-    
-    // Sincroniza tarefas com o armazenamento local para os agentes
-    syncTasksFromFrontend(updatedTasks)
-    console.log("Tarefas atualizadas sincronizadas com o banco de dados em memória:", updatedTasks);
-  }
-
-  // Atualiza uma tarefa específica (quando alterada pelo chat)
-  const handleTaskUpdate = (updatedTask: Task) => {
-    const updatedTasks = tasks.map(task => 
-      task.id === updatedTask.id ? updatedTask : task
-    );
-    
     setTasks(updatedTasks);
     
-    // Sincroniza com o armazenamento em memória após atualizar
+    // Envie tarefas para o servidor se integração estiver ativa
     syncTasksFromFrontend(updatedTasks);
-    
-    // Atualiza a tarefa selecionada, se for a mesma
-    if (selectedTask && selectedTask.id === updatedTask.id) {
-      setSelectedTask(updatedTask)
-    }
-    
-    console.log("Tarefa atualizada:", updatedTask);
   }
-
-  const handleTaskClick = (task: Task) => {
-    setSelectedTask(task)
-    setIsChatOpen(true)
+  
+  const handleTaskSelect = (task: Task) => {
+    setSelectedTask(task);
+    setIsChatOpen(true);
   }
-
-  const handleChatClose = () => {
-    setIsChatOpen(false)
-    setSelectedTask(null)
+  
+  const handleCloseChatSidebar = () => {
+    setIsChatOpen(false);
   }
-
+  
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <main className="flex min-h-screen min-w-[800px]">
       <Sidebar />
-      <main className="flex-1 flex flex-col">
-        <TaskBoard 
-          onTaskClick={handleTaskClick} 
-          onTasksUpdate={handleTasksUpdate}
-          initialTasks={tasks}
-        />
-      </main>
-      <ChatSidebar 
-        isOpen={isChatOpen}
-        selectedTask={selectedTask}
-        onClose={handleChatClose}
-        onTaskUpdated={handleTaskUpdate}
+      
+      <TaskBoard 
+        onTaskClick={handleTaskSelect}
+        onTasksUpdate={handleTasksUpdate}
+        initialTasks={tasks}
       />
-    </div>
+      
+      <ChatSidebar 
+        selectedTask={selectedTask}
+        isOpen={isChatOpen} 
+        onClose={handleCloseChatSidebar}
+      />
+    </main>
   )
 } 
