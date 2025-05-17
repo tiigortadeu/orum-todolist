@@ -15,15 +15,6 @@ interface Task {
   checked: boolean
 }
 
-type FilterOperator = 'is' | 'is not' | 'contains' | 'starts with' | 'ends with' | 'is empty' | 'is not empty'
-
-interface Filter {
-  id: string
-  field: keyof Task
-  operator: FilterOperator
-  value: string
-}
-
 const taskCategories = [
   { name: "Saúde", emoji: "🧘‍♀️", color: "bg-green-100 text-green-800" },
   { name: "Compromissos", emoji: "📅", color: "bg-blue-100 text-blue-800" },
@@ -37,16 +28,6 @@ const priorityLevels = {
   medium: { label: "Média", color: "bg-yellow-100 text-yellow-800" },
   low: { label: "Baixa", color: "bg-green-100 text-green-800" }
 }
-
-const fieldOptions = [
-  { value: 'text', label: 'Título' },
-  { value: 'description', label: 'Descrição' },
-  { value: 'tag', label: 'Categoria' },
-  { value: 'priority', label: 'Prioridade' },
-  { value: 'time', label: 'Horário' },
-  { value: 'dueDate', label: 'Data' },
-  { value: 'checked', label: 'Status' },
-]
 
 const initialTasks: Task[] = [
   { 
@@ -101,8 +82,7 @@ const initialTasks: Task[] = [
 
 export default function TaskBoard() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
-  const [filters, setFilters] = useState<Filter[]>([])
-  const [showFilters, setShowFilters] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
   const [input, setInput] = useState("")
   const [description, setDescription] = useState("")
   const [selectedTag, setSelectedTag] = useState(taskCategories[0].name)
@@ -110,56 +90,6 @@ export default function TaskBoard() {
   const [selectedTime, setSelectedTime] = useState("")
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [showAddTask, setShowAddTask] = useState(false)
-
-  const addFilter = () => {
-    const newFilter: Filter = {
-      id: Date.now().toString(),
-      field: 'text',
-      operator: 'contains',
-      value: ''
-    }
-    setFilters([...filters, newFilter])
-  }
-
-  const updateFilter = (id: string, updates: Partial<Filter>) => {
-    setFilters(filters.map(filter => 
-      filter.id === id ? { ...filter, ...updates } : filter
-    ))
-  }
-
-  const removeFilter = (id: string) => {
-    setFilters(filters.filter(filter => filter.id !== id))
-  }
-
-  const evaluateFilter = (task: Task, filter: Filter): boolean => {
-    const value = task[filter.field]
-    const compareValue = String(value).toLowerCase()
-    const filterValue = filter.value.toLowerCase()
-
-    switch (filter.operator) {
-      case 'is':
-        return compareValue === filterValue
-      case 'is not':
-        return compareValue !== filterValue
-      case 'contains':
-        return compareValue.includes(filterValue)
-      case 'starts with':
-        return compareValue.startsWith(filterValue)
-      case 'ends with':
-        return compareValue.endsWith(filterValue)
-      case 'is empty':
-        return !value || value === ''
-      case 'is not empty':
-        return !!value && value !== ''
-      default:
-        return true
-    }
-  }
-
-  const filterTasks = (tasks: Task[]): Task[] => {
-    if (filters.length === 0) return tasks
-    return tasks.filter(task => filters.every(filter => evaluateFilter(task, filter)))
-  }
 
   const toggleTask = (taskId: string) => {
     setTasks(tasks => tasks.map(task => 
@@ -193,115 +123,25 @@ export default function TaskBoard() {
     setShowAddTask(false)
   }
 
-  const FilterBuilder = () => (
-    <div className="mb-6">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="material-icons text-gray-400">filter_list</span>
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="text-sm text-gray-600 hover:text-gray-800"
-        >
-          Filtros {filters.length > 0 && `(${filters.length})`}
-        </button>
-      </div>
+  const filterTasks = (tasks: Task[]): Task[] => {
+    if (!searchQuery.trim()) return tasks
 
-      {showFilters && (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-          <div className="p-4 space-y-3">
-            {filters.map(filter => (
-              <div key={filter.id} className="flex items-center gap-2">
-                <select
-                  value={filter.field}
-                  onChange={(e) => updateFilter(filter.id, { field: e.target.value as keyof Task })}
-                  className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 min-w-[120px]"
-                >
-                  {fieldOptions.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  value={filter.operator}
-                  onChange={(e) => updateFilter(filter.id, { operator: e.target.value as FilterOperator })}
-                  className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 min-w-[120px]"
-                >
-                  <option value="is">é</option>
-                  <option value="is not">não é</option>
-                  <option value="contains">contém</option>
-                  <option value="starts with">começa com</option>
-                  <option value="ends with">termina com</option>
-                  <option value="is empty">está vazio</option>
-                  <option value="is not empty">não está vazio</option>
-                </select>
-
-                {!['is empty', 'is not empty'].includes(filter.operator) && (
-                  filter.field === 'priority' ? (
-                    <select
-                      value={filter.value}
-                      onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
-                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 flex-1"
-                    >
-                      {Object.entries(priorityLevels).map(([key, value]) => (
-                        <option key={key} value={key}>
-                          {value.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : filter.field === 'tag' ? (
-                    <select
-                      value={filter.value}
-                      onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
-                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 flex-1"
-                    >
-                      {taskCategories.map(category => (
-                        <option key={category.name} value={category.name}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  ) : filter.field === 'checked' ? (
-                    <select
-                      value={filter.value}
-                      onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
-                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 flex-1"
-                    >
-                      <option value="true">Concluída</option>
-                      <option value="false">Pendente</option>
-                    </select>
-                  ) : (
-                    <input
-                      type={filter.field === 'dueDate' ? 'date' : filter.field === 'time' ? 'time' : 'text'}
-                      value={filter.value}
-                      onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
-                      placeholder="Valor"
-                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 flex-1"
-                    />
-                  )
-                )}
-
-                <button
-                  onClick={() => removeFilter(filter.id)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <span className="material-icons">close</span>
-                </button>
-              </div>
-            ))}
-
-            <button
-              onClick={addFilter}
-              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
-            >
-              <span className="material-icons text-lg">add</span>
-              Adicionar filtro
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
+    const query = searchQuery.toLowerCase()
+    return tasks.filter(task => {
+      const searchableFields = [
+        task.text,
+        task.description,
+        task.tag,
+        task.time,
+        priorityLevels[task.priority].label,
+        new Date(task.dueDate).toLocaleDateString('pt-BR')
+      ]
+      
+      return searchableFields.some(field => 
+        field.toLowerCase().includes(query)
+      )
+    })
+  }
 
   return (
     <div className="flex-1 bg-white">
@@ -313,7 +153,24 @@ export default function TaskBoard() {
           </button>
         </div>
 
-        <FilterBuilder />
+        <div className="relative mb-8">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar tarefas..."
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 text-sm focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
+          />
+          <span className="material-icons absolute left-3 top-2 text-gray-400">search</span>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-2 text-gray-400 hover:text-gray-600"
+            >
+              <span className="material-icons">close</span>
+            </button>
+          )}
+        </div>
 
         <div className="mb-8">
           {!showAddTask ? (
