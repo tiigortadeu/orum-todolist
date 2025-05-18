@@ -117,7 +117,7 @@ Com o tempo, a ORUM AI se torna um parceiro de produtividade cada vez mais efici
 A experiência de criar este projeto foi extremamente enriquecedora. Ficou evidente o enorme potencial de validação rápida de ideias que esse workflow com agentes de IA oferece: em apenas dois dias, foi possível sair do conceito até um protótipo funcional, explorando todas as etapas fundamentais de um produto inovador.
 
 Para o futuro, existem várias melhorias planejadas:
-- **Aprendizado com contexto de chats antigos:** A ideia é evoluir o modelo para que ele aprenda com interações passadas, elevando a personalização e a inteligência do assistente. Isso depende da implementação de um banco de dados robusto para armazenar e analisar os históricos.
+- **Aprendizado com contexto de chats antigos:**  elevar maturidade e personalização do RAG e a inteligência do assistente. Isso depende da implementação de um banco de dados robusto para armazenar e analisar os históricos.
 - **Reestruturação e refatoração:** Haverá um trabalho contínuo de refino da arquitetura e do código, tornando a solução mais escalável, organizada e eficiente.
 
 O desenvolvimento desta ferramenta demonstrou um potencial extraordinário para validação ágil de ideias. Isso abre portas para imaginar uma futura “fábrica de software” movida por agentes inteligentes, acelerando a criação de produtos inovadores com velocidade e qualidade jamais vistas.
