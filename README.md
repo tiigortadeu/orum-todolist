@@ -9,17 +9,6 @@ Esta jornada demonstra o potencial de acelerar do zero ao protótipo funcional e
 ---
 
 <details>
-  <summary><strong>🛠️ Ferramentas Utilizadas na construção do Projeto</strong></summary>
-
-- **Cursor:** A ferramenta essencial para a criação de 100% do código da ORUM AI, interpretando minhas instruções detalhadas e transformando ideias em realidade funcional.
-- **BUILDER.IO:** Fundamental na concepção de um layout intuitivo e responsivo para a aplicação, permitindo a prototipagem visual e os ajustes precisos da experiência do usuário.
-- **GEMINI:** Um aliado poderoso na geração de ideias inovadoras para o projeto e na criação de uma documentação clara e abrangente, garantindo a compreensão e a evolução contínua da ORUM AI.
-
-</details>
-
----
-
-<details>
   <summary><strong>🛠️ Tecnologias Utilizadas na construção do Projeto</strong></summary>
 
 - **Cursor:** A ferramenta essencial para a criação de 100% do código da ORUM AI, interpretando minhas instruções detalhadas e transformando ideias em realidade funcional.
