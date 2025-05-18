@@ -9,13 +9,33 @@ Esta jornada demonstra o potencial de acelerar do zero ao protótipo funcional e
 ---
 
 <details>
-  <summary><strong>🛠️ Ferramentas Poderosas a Serviço da Inteligência</strong></summary>
+  <summary><strong>🛠️ Ferramentas Utilizadas na construção do Projeto</strong></summary>
 
 - **Cursor:** A ferramenta essencial para a criação de 100% do código da ORUM AI, interpretando minhas instruções detalhadas e transformando ideias em realidade funcional.
 - **BUILDER.IO:** Fundamental na concepção de um layout intuitivo e responsivo para a aplicação, permitindo a prototipagem visual e os ajustes precisos da experiência do usuário.
 - **GEMINI:** Um aliado poderoso na geração de ideias inovadoras para o projeto e na criação de uma documentação clara e abrangente, garantindo a compreensão e a evolução contínua da ORUM AI.
 
 </details>
+
+---
+
+<details>
+  <summary><strong>🛠️ Tecnologias Utilizadas na construção do Projeto</strong></summary>
+
+- **Cursor:** A ferramenta essencial para a criação de 100% do código da ORUM AI, interpretando minhas instruções detalhadas e transformando ideias em realidade funcional.
+- **BUILDER.IO:** Fundamental na concepção de um layout intuitivo e responsivo para a aplicação, permitindo a prototipagem visual e os ajustes precisos da experiência do usuário.
+- **GEMINI:** Um aliado poderoso na geração de ideias inovadoras para o projeto e na criação de uma documentação clara e abrangente, garantindo a compreensão e a evolução contínua da ORUM AI.
+- **Google ADK (AI Development Kit):** Kit de desenvolvimento de IA do Google, utilizado para facilitar a integração, deploy e orquestração de modelos de linguagem (LLMs) e agentes inteligentes no Vertex AI, com destaque para a criação de bots e chats inteligentes.
+- **Next.js:** Framework React moderno que oferece SSR (Server-Side Rendering), rotas dinâmicas e excelente performance, tornando a interface rápida e escalável.
+- **React:** Biblioteca base para construção de interfaces de usuário interativas e reativas, facilitando o desenvolvimento de componentes reutilizáveis.
+- **TypeScript:** Superset do JavaScript que adiciona tipagem estática, aumentando a segurança, reduzindo bugs e facilitando a manutenção do código.
+- **Tailwind CSS:** Framework utilitário para estilização rápida e consistente, permitindo criar layouts modernos e responsivos com menos código.
+- **Framer Motion:** Biblioteca de animações para React, proporcionando transições suaves e animações modernas para uma melhor experiência do usuário.
+- **Google Cloud Functions:** Funções serverless que orquestram as chamadas entre front-end, modelos de IA e banco de dados, sem necessidade de gerenciar servidores.
+- **Firestore (GCP):** Banco de dados NoSQL em tempo real, escalável e gerenciado, responsável por armazenar tarefas, histórico de chat, contexto do usuário e preferências.
+- 
+
+</details> 
 
 ---
 
