@@ -1,5 +1,7 @@
 # ORUM AI: Seu Assistente de Produtividade Inteligente Impulsionado por IA
 
+[▶️ Assista à demonstração em vídeo no Vimeo](https://vimeo.com/1085387053?share=copy)
+
 Este é um projeto pessoal de gerenciamento de tarefas, criado durante a Imersão de AI da Alura, e representa um experimento completo de cocriação com Inteligência Artificial. Todo o desenvolvimento foi realizado **100% com o auxílio de IA**: desde a concepção da arquitetura, estruturação dos fluxos, até a geração do código-fonte, nenhum trecho foi escrito manualmente — todo o processo se baseou em prompts, revisão e direcionamento estratégico. O protótipo funcional foi concebido em apenas **2 dias**.
 
 O grande diferencial deste projeto está na arquitetura de **agentes inteligentes especializados**. Cada agente possui um “superpoder” próprio: um entende o que você diz, outro consulta seu histórico, outro busca informações externas e outro gera respostas personalizadas. Com isso, a interface de chat se transforma em um verdadeiro assistente contextual — não é apenas uma caixa de texto, mas um especialista adaptado exatamente à tarefa ou contexto em que você está focado. Ao interagir, os agentes já têm todo o contexto da tarefa e do seu histórico, oferecendo assistência e insights hiper-relevantes no momento certo, no lugar certo.
