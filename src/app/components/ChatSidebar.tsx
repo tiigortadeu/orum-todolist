@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Task } from './TaskBoard'
 import { usePersistentChat, ChatMessage } from '../../lib/db/chats'
+import DashboardViewer from './DashboardViewer'
 
 interface ChatSidebarProps {
   isOpen: boolean
@@ -25,6 +26,7 @@ export default function ChatSidebar({
   const [hasWelcomeMessage, setHasWelcomeMessage] = useState<Record<string, boolean>>({})
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const chatSidebarRef = useRef<HTMLDivElement>(null)
+  const [currentDashboard, setCurrentDashboard] = useState<any>(null)  // Estado para armazenar o dashboard atual
   
   // Usar o hook de persistência de chat
   const { messages, setMessages, taskId, setTaskId, clearChat } = usePersistentChat(
@@ -118,10 +120,16 @@ export default function ChatSidebar({
         sender: 'system',
         timestamp: data.timestamp,
         intent: data.intent,
-        entities: data.entities
+        entities: data.entities,
+        dashboardResult: data.dashboardResult // Adiciona dashboardResult se houver
       }
 
       setMessages([botMessage])
+      
+      // Verifica se há um dashboard na resposta
+      if (data.dashboardResult) {
+        setCurrentDashboard(data.dashboardResult)
+      }
       
       // Rolar para o final após adicionar a mensagem de boas-vindas
       setTimeout(scrollToBottom, 150)
@@ -199,10 +207,16 @@ export default function ChatSidebar({
         sender: 'system',
         timestamp: data.timestamp,
         intent: data.intent,
-        entities: data.entities
+        entities: data.entities,
+        dashboardResult: data.dashboardResult // Adiciona dashboardResult se houver
       }
 
       setMessages(prev => [...prev, botMessage])
+      
+      // Verifica se há um dashboard na resposta
+      if (data.dashboardResult) {
+        setCurrentDashboard(data.dashboardResult)
+      }
       
       // Rolar para o final após adicionar a resposta do sistema
       setTimeout(scrollToBottom, 150)
@@ -237,6 +251,7 @@ export default function ChatSidebar({
   const handleClearChat = () => {
     if (window.confirm('Tem certeza que deseja finalizar este chat? Todo o histórico será perdido.')) {
       clearChat()
+      setCurrentDashboard(null) // Limpa o dashboard atual
       setHasWelcomeMessage(prev => {
         const newState = { ...prev }
         if (taskId) delete newState[taskId]
@@ -246,7 +261,7 @@ export default function ChatSidebar({
   }
 
   // Renderiza mensagens com suporte a Markdown
-  const renderMessageContent = (text: string, sender: 'user' | 'system') => {
+  const renderMessageContent = (text: string, sender: 'user' | 'system', dashboardResult: any = null) => {
     if (sender === 'user') {
       return <p className="text-sm whitespace-pre-wrap">{text}</p>;
     } else {
@@ -255,6 +270,13 @@ export default function ChatSidebar({
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {text}
           </ReactMarkdown>
+          
+          {/* Renderiza o dashboard se existir */}
+          {dashboardResult && (
+            <div className="mt-4">
+              <DashboardViewer dashboardResult={dashboardResult} />
+            </div>
+          )}
         </div>
       );
     }
@@ -269,7 +291,7 @@ export default function ChatSidebar({
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: '100%', opacity: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="w-[480px] h-screen bg-white/90 backdrop-blur-sm border-l border-gray-200 flex flex-col fixed right-0 top-0"
+          className="w-[600px] h-screen bg-white/90 backdrop-blur-sm border-l border-gray-200 flex flex-col fixed right-0 top-0"
         >
           {/* Header */}
           <div className="p-4 border-b border-gray-200">
@@ -307,6 +329,13 @@ export default function ChatSidebar({
             </div>
           </div>
 
+          {/* Dashboard fixo (se existir) */}
+          {currentDashboard && (
+            <div className="border-b border-gray-200 p-4">
+              <DashboardViewer dashboardResult={currentDashboard} />
+            </div>
+          )}
+
           {/* Messages */}
           <div 
             ref={messagesContainerRef}
@@ -332,7 +361,7 @@ export default function ChatSidebar({
                       : 'bg-gray-100 text-gray-800'
                   }`}
                 >
-                  {renderMessageContent(message.text, message.sender)}
+                  {renderMessageContent(message.text, message.sender, message.dashboardResult)}
                   <span className="text-xs opacity-70 mt-2 block">
                     {new Date(message.timestamp).toLocaleTimeString()}
                   </span>

@@ -4,6 +4,8 @@ import { ResponseAgent } from './response'
 import { getTaskContext } from '../db/tasks'
 import { OrumaivAgent } from './adk-agent'
 import { getGoogleApiKey } from '../config/api-keys'
+import { DashboardOrchestrator } from './dashboard/dashboard-orchestrator'
+import { adkAgent } from './adk-agent-instance'
 
 /**
  * Interface para o contexto da mensagem
@@ -25,31 +27,11 @@ interface AgentResponse {
   confidence: number
   taskUpdated?: boolean
   taskData?: any
+  dashboardResult?: any // Adicionado para suportar resultados de dashboard
 }
 
-// Inicialização do agente ADK (singleton)
-let adkAgent: OrumaivAgent | null = null;
-try {
-  // Obtém a chave da API do .env
-  const apiKey = getGoogleApiKey();
-  
-  // Cria o agente apenas se a chave estiver configurada
-  adkAgent = new OrumaivAgent({
-    apiKey,
-    model: 'gemini-2.0-flash',
-    temperature: 0.7,
-  });
-  
-  if (adkAgent.isInitialized()) {
-    console.log('Orquestrador: OrumaivAgent inicializado com sucesso');
-  } else {
-    console.warn(`Orquestrador: OrumaivAgent não inicializado. Erro: ${adkAgent.getInitError()}`);
-    adkAgent = null;
-  }
-} catch (error: any) {
-  console.error('Orquestrador: Erro ao inicializar OrumaivAgent:', error);
-  adkAgent = null;
-}
+// Inicialização do orquestrador de dashboard
+const dashboardOrchestrator = new DashboardOrchestrator(adkAgent);
 
 /**
  * Processa uma mensagem através do orquestrador de agentes
@@ -125,7 +107,48 @@ export async function processMessageWithAgents(
       
       console.log('Orquestrador: Resultado do NLU:', nluResult)
       
-      // 3. Se estamos no modo conversacional, vai direto para o ADK
+      // 3. Verifica se é uma solicitação de dashboard
+      if (nluResult.intent === 'dashboard_request' || 
+          message.toLowerCase().includes('gráfico') || 
+          message.toLowerCase().includes('dashboard') ||
+          message.toLowerCase().includes('grafico') ||
+          message.toLowerCase().includes('visualizar') ||
+          message.toLowerCase().includes('mostrar dados') ||
+          message.toLowerCase().includes('gerar chart')) {
+        
+        console.log('Orquestrador: Detectada solicitação de dashboard, redirecionando para DashboardOrchestrator');
+        
+        try {
+          // Processar com o orquestrador de dashboard
+          const dashboardResult = await dashboardOrchestrator.processDashboardRequest(message, {
+            task: taskContext,
+            userId: context.userId
+          });
+          
+          // Gerar explicação para o dashboard
+          const explanation = await dashboardOrchestrator.generateDashboardExplanation(dashboardResult);
+          
+          return {
+            content: explanation,
+            intent: 'dashboard_generation',
+            entities: nluResult.entities,
+            confidence: nluResult.confidence,
+            taskUpdated: false,
+            dashboardResult: dashboardResult
+          };
+        } catch (error: any) {
+          console.error('Orquestrador: Erro ao processar dashboard:', error);
+          return {
+            content: `Desculpe, não consegui gerar o dashboard solicitado. Erro: ${error.message || 'Erro desconhecido'}`,
+            intent: 'dashboard_generation_error',
+            entities: nluResult.entities,
+            confidence: nluResult.confidence,
+            taskUpdated: false
+          };
+        }
+      }
+      
+      // 4. Se estamos no modo conversacional, vai direto para o ADK
       if (nluResult.conversationalMode && adkAgent && adkAgent.isInitialized()) {
         console.log('Orquestrador: Modo conversacional detectado, usando ADK diretamente');
         try {
@@ -144,7 +167,7 @@ export async function processMessageWithAgents(
         }
       }
       
-      // 4. Executa operações relacionadas a tarefas, se necessário
+      // 5. Executa operações relacionadas a tarefas, se necessário
       let taskResult = null
       let taskUpdated = false
       
@@ -195,7 +218,7 @@ export async function processMessageWithAgents(
         }
       }
       
-      // 5. Para perguntas gerais, tenta usar diretamente o ADK agent
+      // 6. Para perguntas gerais, tenta usar diretamente o ADK agent
       if (nluResult.intent === 'general_question' && nluResult.requiresExternalInfo && adkAgent && adkAgent.isInitialized()) {
         try {
           console.log('Orquestrador: Usando ADK Agent diretamente para pergunta geral');
@@ -217,7 +240,7 @@ export async function processMessageWithAgents(
         console.log('Orquestrador: ADK Agent não disponível para pergunta geral, usando fallback');
       }
       
-      // 6. Gera uma resposta natural com o agente de resposta
+      // 7. Gera uma resposta natural com o agente de resposta
       console.log('Orquestrador: Gerando resposta natural')
       const responseAgent = new ResponseAgent()
       const response = await responseAgent.generateResponse({
@@ -229,7 +252,7 @@ export async function processMessageWithAgents(
       
       console.log('Orquestrador: Resposta gerada:', response)
       
-      // 7. Retorna a resposta processada
+      // 8. Retorna a resposta processada
       return {
         content: response.text,
         intent: nluResult.intent,
@@ -249,25 +272,33 @@ export async function processMessageWithAgents(
       }
     }
   } catch (error: any) {
-    console.error('Erro no orquestrador de agentes:', error)
+    console.error('Erro no processamento da mensagem:', error)
     return {
-      content: `Desculpe, encontrei um problema ao processar sua mensagem: ${error.message || 'Erro desconhecido'}`,
+      content: `Desculpe, ocorreu um erro ao processar sua mensagem: ${error.message || 'Erro desconhecido'}`,
       intent: 'error',
       entities: [],
-      confidence: 0
+      confidence: 0,
+      taskUpdated: false
     }
   }
 }
 
 /**
- * Obtém uma descrição da ação realizada com base na intenção
+ * Obtém uma descrição da ação com base na intenção
  */
 function getActionDescription(intent: string): string {
   switch (intent) {
-    case 'task_create': return 'criar a tarefa';
-    case 'task_update': return 'atualizar a tarefa';
-    case 'task_delete': return 'excluir a tarefa';
-    case 'task_complete': return 'completar a tarefa';
-    default: return 'processar a tarefa';
+    case 'task_create':
+      return 'criar a tarefa';
+    case 'task_update':
+      return 'atualizar a tarefa';
+    case 'task_delete':
+      return 'excluir a tarefa';
+    case 'task_complete':
+      return 'completar a tarefa';
+    case 'task_reopen':
+      return 'reabrir a tarefa';
+    default:
+      return 'gerenciar';
   }
 } 

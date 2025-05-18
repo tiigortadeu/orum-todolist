@@ -7,6 +7,7 @@ export interface ChatMessage {
   timestamp: string;
   intent?: string;
   entities?: Array<{name: string, value: string}>;
+  dashboardResult?: any; // Resultado do dashboard (gráfico) gerado
 }
 
 // Chave usada para armazenar os chats no localStorage
