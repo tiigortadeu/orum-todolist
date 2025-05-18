@@ -132,6 +132,17 @@ export default function Home() {
         generateChart();
       }, 500);
     }
+    
+    // Se todas as tarefas foram excluídas, forçar atualização do dashboard
+    if (updatedTasks.length === 0 && activeView === 'dashboards') {
+      // Limpar o dashboard atual para evitar mostrar dados antigos
+      setDashboardResult(null);
+      // Delay maior para garantir que o dashboard seja recriado do zero
+      setTimeout(() => {
+        console.log('Todas as tarefas foram excluídas, regenerando dashboard do zero');
+        generateChart();
+      }, 800);
+    }
   }
   
   const handleTaskSelect = (task: Task) => {

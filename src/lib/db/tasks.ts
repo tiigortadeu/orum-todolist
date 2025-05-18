@@ -228,76 +228,14 @@ export function syncTasksFromFrontend(tasks: any[]): void {
     console.log("Sincronizando tarefas do frontend:", tasks.length, "tarefas");
     console.log("Detalhes das tarefas:", tasks.map(t => ({ id: t.id, text: t.text, priority: t.priority })));
     
-    // Se não há tarefas para sincronizar e o tasksStore está vazio,
-    // inicializa com tarefas padrão para evitar visualizações vazias
-    if (tasks.length === 0 && Object.keys(tasksStore).length === 0) {
-      console.log("Não há tarefas para sincronizar e o armazenamento está vazio. Usando tarefas padrão.");
-      
-      // Usar as mesmas tarefas padrão do app/page.tsx
-      const defaultTasks = [
-        { 
-          id: '1',
-          text: "Praticar 30 minutos de yoga",
-          description: "Seguir a rotina de yoga matinal para melhorar flexibilidade e foco",
-          tag: "Saúde",
-          emoji: "🧘‍♀️",
-          time: "07h30",
-          dueDate: new Date().toISOString(),
-          priority: "medium",
-          section: "hoje",
-          checked: false 
-        },
-        { 
-          id: '2',
-          text: "Consulta no dentista",
-          description: "Checkup semestral e limpeza",
-          tag: "Compromissos",
-          emoji: "🦷",
-          time: "10h00",
-          dueDate: new Date().toISOString(),
-          priority: "high",
-          section: "hoje",
-          checked: false 
-        },
-        { 
-          id: '3',
-          text: "Comprar pão",
-          description: "Passar na padaria do bairro",
-          tag: "Lista de compras",
-          emoji: "🥖",
-          time: "",
-          dueDate: new Date().toISOString(),
-          priority: "low",
-          section: "hoje",
-          checked: false 
-        },
-        { 
-          id: '4',
-          text: "Planejar sessões de pesquisas do usuário",
-          description: "Preparar roteiro e selecionar participantes para as entrevistas",
-          tag: "Reuniões do dia",
-          emoji: "👥",
-          time: "15h00",
-          dueDate: new Date().toISOString(),
-          priority: "high",
-          section: "equipe",
-          checked: false 
-        }
-      ];
-      
-      defaultTasks.forEach(task => {
-        tasksById[task.id] = task;
-      });
-    } else {
-      // Processa as tarefas normalmente
-      tasks.forEach(task => {
-        if (!task.id) {
-          console.warn("Tarefa sem ID ignorada:", task);
-          return;
-        }
-        tasksById[task.id] = task;
-      });
-    }
+    // Processa as tarefas recebidas do frontend
+    tasks.forEach(task => {
+      if (!task.id) {
+        console.warn("Tarefa sem ID ignorada:", task);
+        return;
+      }
+      tasksById[task.id] = task;
+    });
     
     // Substituindo completamente o armazenamento
     tasksStore = tasksById;

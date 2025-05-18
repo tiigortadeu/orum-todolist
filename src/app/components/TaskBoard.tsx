@@ -88,6 +88,7 @@ interface TaskCardEditorProps {
 }
 
 function TaskCardEditor({ task, onSave, onCancel }: TaskCardEditorProps) {
+  const [text, setText] = useState(task.text);
   const [description, setDescription] = useState(task.description);
   const [selectedTag, setSelectedTag] = useState(task.tag);
   const [selectedPriority, setSelectedPriority] = useState<Task['priority']>(task.priority);
@@ -118,6 +119,7 @@ function TaskCardEditor({ task, onSave, onCancel }: TaskCardEditorProps) {
     
     const updatedTask: Task = {
       ...task,
+      text,
       description,
       tag: selectedTag,
       emoji: selectedCategory?.emoji || "",
@@ -137,6 +139,14 @@ function TaskCardEditor({ task, onSave, onCancel }: TaskCardEditorProps) {
 
   return (
     <form onSubmit={handleSave} onClick={(e) => e.stopPropagation()} className="space-y-4 bg-white p-4 rounded-lg shadow-md">
+      <input
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Nome da tarefa"
+        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:border-gray-400"
+      />
+      
       <textarea
         value={description}
         onChange={(e) => setDescription(e.target.value)}
@@ -308,8 +318,8 @@ export default function TaskBoard({ onTaskClick, onTasksUpdate, initialTasks }: 
       setEditingTaskId(null);
     }
     
-    // Se não estiver editando essa task, abre o chat
-    if (editingTaskId !== task.id) {
+    // Se não estiver editando essa task e a tarefa não estiver concluída, abre o chat
+    if (editingTaskId !== task.id && !task.checked) {
       onTaskClick(task);
     }
   }
@@ -343,6 +353,23 @@ export default function TaskBoard({ onTaskClick, onTasksUpdate, initialTasks }: 
     if (searchContent) {
       setSearchQuery('')
     }
+  }
+
+  // Variável para rastrear cliques recentes no checkbox
+  const [recentlyToggled, setRecentlyToggled] = useState<string | null>(null);
+  
+  // Função auxiliar para registrar clique no checkbox
+  const handleCheckboxToggle = (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    toggleTask(taskId);
+    
+    // Registra este ID como recentemente alternado
+    setRecentlyToggled(taskId);
+    
+    // Limpa após 500ms para permitir cliques futuros
+    setTimeout(() => {
+      setRecentlyToggled(null);
+    }, 500);
   }
 
   return (
@@ -392,7 +419,16 @@ export default function TaskBoard({ onTaskClick, onTasksUpdate, initialTasks }: 
               <div 
                 key={task.id} 
                 className="group flex flex-col gap-2 py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                onClick={() => handleTaskCardClick(task)}
+                onClick={(e) => {
+                  // Verificar se o clique foi diretamente no checkbox
+                  const target = e.target as HTMLElement;
+                  // Não abre o chat se o clique ocorreu no checkbox ou nos botões
+                  if (!target.closest('input[type="checkbox"]') && 
+                      !target.closest('button') && 
+                      recentlyToggled !== task.id) {
+                    handleTaskCardClick(task);
+                  }
+                }}
               >
                 {editingTaskId === task.id ? (
                   <TaskCardEditor 
@@ -406,10 +442,11 @@ export default function TaskBoard({ onTaskClick, onTasksUpdate, initialTasks }: 
                       <input 
                         type="checkbox" 
                         checked={task.checked} 
-                        onChange={(e) => {
+                        onChange={(e) => handleCheckboxToggle(task.id, e)}
+                        onClick={(e) => {
+                          // Impede a propagação do evento de clique para o card
                           e.stopPropagation();
-                          toggleTask(task.id);
-                        }} 
+                        }}
                         className="w-5 h-5 border-2 border-gray-300 rounded-full checked:bg-gray-800 checked:border-gray-800 cursor-pointer transition-colors"
                       />
                       <div className="flex-1">
@@ -437,23 +474,23 @@ export default function TaskBoard({ onTaskClick, onTasksUpdate, initialTasks }: 
                     </div>
                     
                     <div className="flex items-center gap-3 text-sm ml-9">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${priorityColor}`}>
-                        {priorityLevels[task.priority].label}
-                      </span>
+                      {task.time && (
+                        <div className="flex items-center">
+                          <span className="material-icons text-gray-400 text-sm mr-1">schedule</span>
+                          <span className="text-xs text-gray-500">{task.time}</span>
+                        </div>
+                      )}
                       
                       {task.tag && (
-                        <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${categoryColor}`}>
-                          {task.emoji} {task.tag}
-                        </span>
-                      )}
-
-                      {task.time && (
-                        <span className="font-medium text-gray-500">{task.time}</span>
+                        <div className="flex items-center gap-1 text-xs">
+                          <span>{task.emoji}</span>
+                          <span className="text-gray-500">{task.tag}</span>
+                        </div>
                       )}
                       
-                      <span className="text-gray-500">
-                        {new Date(task.dueDate).toLocaleDateString('pt-BR')}
-                      </span>
+                      <div className={`ml-auto px-2 py-0.5 rounded-full text-xs ${priorityColor}`}>
+                        {priorityLevels[task.priority].label}
+                      </div>
                     </div>
                   </>
                 )}
@@ -462,9 +499,8 @@ export default function TaskBoard({ onTaskClick, onTasksUpdate, initialTasks }: 
           })}
         </div>
       </div>
-
-      {/* Modal de adicionar tarefa */}
-      <TaskModal
+      
+      <TaskModal 
         isOpen={isTaskModalOpen}
         onClose={() => setIsTaskModalOpen(false)}
         onSave={addTask}

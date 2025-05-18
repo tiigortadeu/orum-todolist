@@ -16,8 +16,7 @@ export default function Sidebar({ onMenuItemClick }: SidebarProps) {
 
   const menuItems = [
     { id: 'tasks', label: 'Tasks', icon: 'check_circle' },
-    { id: 'dashboards', label: 'Dashboards', icon: 'dashboard' },
-    { id: 'calendar', label: 'Calendar', icon: 'calendar_today' },
+    { id: 'dashboards', label: 'Dashboards', icon: 'dashboard' }
   ]
 
   const handleMenuItemClick = (itemId: string) => {
@@ -52,17 +51,18 @@ export default function Sidebar({ onMenuItemClick }: SidebarProps) {
         {/* Header com perfil */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <img 
-              src="https://randomuser.me/api/portraits/men/32.jpg" 
-              alt="Profile" 
-              className="w-8 h-8 rounded-full flex-shrink-0"
-            />
+            <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 backdrop-blur-sm bg-blue-50">
+              <img 
+                src="https://i.imgur.com/VEqYkz8.png" 
+                alt="ORUM AI Logo" 
+                className="w-full h-full object-cover"
+              />
+            </div>
             <div className={`
               flex-1 overflow-hidden transition-all duration-300 ease-in-out
               ${isExpanded ? 'w-auto opacity-100' : 'w-0 opacity-0'}
             `}>
-              <div className="font-medium text-sm whitespace-nowrap">João Silva</div>
-              <div className="text-xs text-gray-500 whitespace-nowrap">joao@example.com</div>
+              <div className="font-bold text-sm whitespace-nowrap">ORUM AI</div>
             </div>
           </div>
         </div>
