@@ -2,12 +2,15 @@
 
 [▶️ Assista à demonstração em vídeo no Vimeo](https://vimeo.com/1085387053?share=copy)
 
-Este é um projeto pessoal de gerenciamento de tarefas, criado durante a Imersão de AI da Alura, e representa um experimento completo de cocriação com Inteligência Artificial. Todo o desenvolvimento foi realizado **100% com o auxílio de IA**: desde a concepção da arquitetura, estruturação dos fluxos, até a geração do código-fonte, nenhum trecho foi escrito manualmente — todo o processo se baseou em prompts, revisão e direcionamento estratégico. O protótipo funcional foi concebido em apenas **2 dias**.
 
-O grande diferencial deste projeto está na arquitetura de **agentes inteligentes especializados**. Cada agente possui um “superpoder” próprio: um entende o que você diz, outro consulta seu histórico, outro busca informações externas e outro gera respostas personalizadas. Com isso, a interface de chat se transforma em um verdadeiro assistente contextual — não é apenas uma caixa de texto, mas um especialista adaptado exatamente à tarefa ou contexto em que você está focado. Ao interagir, os agentes já têm todo o contexto da tarefa e do seu histórico, oferecendo assistência e insights hiper-relevantes no momento certo, no lugar certo.
-
-Esta jornada demonstra o potencial de acelerar do zero ao protótipo funcional em tempo recorde, utilizando a IA não apenas como ferramenta, mas como verdadeiro coautor do desenvolvimento.
-
+Este é um projeto pessoal de gerenciamento de tarefas, criado durante a Imersão de AI da Alura, e representa um experimento completo de cocriação com Inteligência Artificial.
+O grande diferencial do Orum reside em sua arquitetura de agentes inteligentes especializados. Imagine ter um assistente para cada tipo de tarefa, com conhecimento  do seu contexto e histórico de resoluçao de tarefas. Ao invés de uma simples lista de afazeres, o Orum oferece uma interface de chat dinâmica onde cada agente atua como um especialista dedicado, pronto para te auxiliar no nível da sua necessidade.
+Além disso, é crucial ressaltar: o Orum foi construído 100% com o auxílio de IA, com exceção da ideia original. Desde a concepção da arquitetura e estruturação dos fluxos, até a geração do código-fonte, todo o processo de desenvolvimento se baseou em prompts, revisão e direcionamento estratégico. Este protótipo funcional foi concebido em apenas 2 dias, demonstrando o poder da IA como coautor no desenvolvimento de soluções inovadoras e contextuais.
+Em resumo, o Orum oferece:
+ * Agentes Inteligentes Especializados: Assistência contextual e personalizada para cada tarefa.
+ * Conhecimento do Seu Contexto: Agentes que entendem o seu histórico e a situação atual.
+ * Agentes de Geraçao de Reports: Agentes qhe identificam sua necessidade e constroem gráficos dinâmicos.
+ 
 ---
 
 <details>
