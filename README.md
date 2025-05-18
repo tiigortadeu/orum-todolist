@@ -1,3 +1,8 @@
+Minha ideia com o Orum foi criar um todo list que gera agentes especializados de acordo com o contexto da tarefa. Ou seja, o usuário tem a experiência de cada vez que insere uma tarefa e abre o chat daquela tarefa, o chat é um especialista daquele contexto.
+
+Fiz esse projeto usando o cursor, mas defini com a AI a arquitetura dessa implantação toda, direcionando e colocando padrões de implantação (como por exemplo usar as APIs do Google).
+
+
 # ORUM AI: Seu Assistente de Produtividade Inteligente Impulsionado por IA
 
 [▶️ Assista à demonstração em vídeo no Vimeo](https://vimeo.com/1085387053?share=copy)
